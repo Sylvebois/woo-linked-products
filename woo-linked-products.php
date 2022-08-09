@@ -44,6 +44,34 @@ function woo_linked_products_settings_menu() {
 }
 add_action('admin_menu', 'woo_linked_products_settings_menu', 99);
 
+/**
+ * Do actions on init
+ */
+function woo_linked_products_init() {
+    $page = $_REQUEST['page'];
+
+    if($page === 'woo_linked_products') {
+        $nonce = $_REQUEST['sec'];
+        $action = $_REQUEST['action'];
+        $metaId = $_REQUEST['id'];
+        $metaData = $_REQUEST['metadata'];
+        
+        if($action === 'delete' && wp_verify_nonce($nonce, 'delete_post_metadata_by_mid_'.$metaId)) {
+            //delete_meta_by_mid('post', $metaId);
+            echo 'DELETE';
+        }
+        else if($action === 'update' && wp_verify_nonce($nonce, 'update_post_metadata_by_mid_'.$metaId) && isset($metaData)) {	
+            //update_meta_by_mid('post', $metaId, $metaData);
+            echo 'UPDATE';
+        }
+        else if ($action === 'create' && wp_verify_nonce($nonce, 'create_post_metadata') && isset($metaData)) {	
+            //create_meta('post', $metaId, $metaData);
+            echo 'CREATE';
+        }
+    }
+}
+add_action ('admin_init', 'woo_linked_products_init');
+
 /*
  * Display the table of linked products
  */
@@ -55,18 +83,24 @@ function woo_linked_products_main_page() {
         <h1 class="wp-heading-inline"><?php _e('Linked Products', 'woo-linked-products'); ?></h1>
         <a href="#" class="page-title-action"><?php _e('Add link', 'woo-linked-products'); ?></a>
         <p><?php _e('This page allows you to manage the linked products.', 'woo-linked-products'); ?></p>
-    </div>
     <?php  
 
     if ( class_exists( 'Linked_Products_List_Table' ) ) {
         $table = new Linked_Products_List_Table();
         $table->prepare_items();
-        $table->display();
+        $table->has_items() ? $table->display() : $table->no_items();
     }
     else {
         _e('Class Linked_Products_List_Table not found !', 'woo-linked-products');
     }
+
+    echo "</div>";
 }
+
+/**
+ * Display the form to add a new link
+ */
+function woo_linked_products_edit_form() {}
 
 /**
  * Add linked products to cart when main product is added to cart

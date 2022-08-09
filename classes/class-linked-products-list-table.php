@@ -32,7 +32,7 @@ class Linked_Products_List_Table extends WP_List_Table {
         //could query be improved by using WP_meta_query ?
         global $wpdb;
         
-        $sql = "SELECT ID, meta_id, SUBSTRING(meta_key,16) AS 'linked_id', meta_value, post_title, sku 
+        $sql = "SELECT ID, meta_id, SUBSTRING(meta_key,16) AS 'linked_id', meta_value, post_title, sku, post_parent 
                 FROM {$wpdb->prefix}postmeta 
                 JOIN {$wpdb->prefix}posts ON {$wpdb->prefix}posts.ID = {$wpdb->prefix}postmeta.post_id 
                 JOIN {$wpdb->prefix}wc_product_meta_lookup ON {$wpdb->prefix}wc_product_meta_lookup.product_id = {$wpdb->prefix}posts.ID
@@ -112,6 +112,7 @@ class Linked_Products_List_Table extends WP_List_Table {
                 'linkedProductId' => $linked_product['linked_id'],
                 'linkedProductSku' => $additionalData[0]['sku'],
                 'linkedProductName' => $additionalData[0]['post_title'],
+                'parentId' => $linked_product['post_parent'],
                 'qty' => $linked_product['meta_value'],
                 'metaId' => $linked_product['meta_id'],
             );
@@ -152,7 +153,7 @@ class Linked_Products_List_Table extends WP_List_Table {
     /**
      * Set the columns to be displayed in the table
      * 
-     * @return Array
+     * @return array
      */
     public function get_columns() {
 		return array(
@@ -172,7 +173,7 @@ class Linked_Products_List_Table extends WP_List_Table {
     public function get_sortable_columns() {
         return array(
             'mainProductName' => array( 'mainProductName', false ),
-            'linkedProductName' => array( 'linkedProduct', false ),
+            'linkedProductName' => array( 'linkedProductName', false ),
         );
     }
 
@@ -215,9 +216,17 @@ class Linked_Products_List_Table extends WP_List_Table {
 	 * @return string
 	 */
 	protected function maybe_render_actions( $row ) {
+        $editUrl = admin_url().'post.php?post='.( $row['parentId'] === 0 ? $row['mainProductId'] : $row['parentId'] ).'&action=edit';
+        $deleteUrl = add_query_arg([
+            'action' => 'delete',
+            'id' => $row['metaId'],
+            'sec' => wp_create_nonce('delete_post_metadata_by_mid_'.$row['metaId']),
+        ]);
+        $nonceUrl = wp_nonce_url( home_url( $_SERVER['REQUEST_URI'] ).'&deletemeta='.$row['metaId'], 'delete_post_metadata_by_mid_'.$row['metaId'] );
+
 		return '<div class="row-actions">'
-                    .'<span class="edit"><a href="#" aria-label="'.__( 'Edit link', 'woo-linked-products' ).'">'.__( 'Edit', 'woo-linked-products' ).'</a> | </span>'
-                    .'<span class="submitdelete"><a href="#" aria-label="'.__( 'Delete link', 'woo-linked-products' ).'">'.__( 'Delete', 'woo-linked-products' ).'</a></span>'
+                    .'<span class="edit"><a href="'.$editUrl.'" aria-label="'.__( 'Edit link', 'woo-linked-products' ).'">'.__( 'Edit', 'woo-linked-products' ).'</a> | </span>'
+                    .'<span class="delete"><a href="'.$deleteUrl.'" aria-label="'.__( 'Delete link', 'woo-linked-products' ).'">'.__( 'Delete', 'woo-linked-products' ).'</a></span>'
                 .'</div>';
 	}
 
@@ -238,7 +247,7 @@ class Linked_Products_List_Table extends WP_List_Table {
 	 * @return void
 	 */
 	public function process_bulk_action() {
-        if ( 'bulk_delete' === $this->current_action() ) {
+        if ( $this->current_action() === 'bulk_delete') {
             //1. get list of selected meta ids
             //2. then delete them
 		}
