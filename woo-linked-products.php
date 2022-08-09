@@ -20,21 +20,53 @@
  /*
   * Usefull links:
   * https://wp-kama.com/plugin/woocommerce/hook
+  * https://www.vijayan.in/how-to-create-custom-table-list-in-wordpress-admin-page/
   */
 
 // If this file is called directly, cancel.
 defined( 'ABSPATH' ) || exit;
 
 function woo_linked_products_activate() {
-    // Your activation logic goes here.
+
 }
 register_activation_hook( __FILE__, 'woo_linked_products_activate' );
 
 
 function woo_linked_products_deactivate() {
-    // Your deactivation logic goes here.
+    
 }
 register_deactivation_hook( __FILE__, 'woo_linked_products_deactivate' );
+
+function woo_linked_products_settings_menu() {
+    if ( class_exists( 'WooCommerce' ) ) {
+        add_submenu_page('edit.php?post_type=product', __('Linked Products', 'woo-linked-products'), __('Linked Products', 'woo-linked-products'), 'manage_woocommerce', 'woo_linked_products', 'woo_linked_products_main_page');
+    }
+}
+add_action('admin_menu', 'woo_linked_products_settings_menu', 99);
+
+/*
+ * Display the table of linked products
+ */
+function woo_linked_products_main_page() { 
+    require_once plugin_dir_path( __FILE__ ) . 'classes/class-linked-products-list-table.php';
+    ?>
+
+    <div class="wrap">
+        <h1 class="wp-heading-inline"><?php _e('Linked Products', 'woo-linked-products'); ?></h1>
+        <a href="#" class="page-title-action"><?php _e('Add link', 'woo-linked-products'); ?></a>
+        <p><?php _e('This page allows you to manage the linked products.', 'woo-linked-products'); ?></p>
+    </div>
+    <?php  
+
+    if ( class_exists( 'Linked_Products_List_Table' ) ) {
+        $table = new Linked_Products_List_Table();
+        $table->prepare_items();
+        $table->display();
+    }
+    else {
+        _e('Class Linked_Products_List_Table not found !', 'woo-linked-products');
+    }
+}
 
 /**
  * Add linked products to cart when main product is added to cart
