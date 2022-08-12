@@ -216,13 +216,18 @@ class Linked_Products_List_Table extends WP_List_Table {
 	 * @return string
 	 */
 	protected function maybe_render_actions( $row ) {
-        $editUrl = admin_url().'post.php?post='.( $row['parentId'] === 0 ? $row['mainProductId'] : $row['parentId'] ).'&action=edit';
+        $editUrl = add_query_arg([
+            'action' => 'edit',
+            'metaId' => $row['metaId'],
+            'mainProductId' => $row['mainProductId'],
+            'linkedProductId' => $row['linkedProductId'],
+            'qty' => $row['qty'],
+        ]);
         $deleteUrl = add_query_arg([
             'action' => 'delete',
-            'id' => $row['metaId'],
+            'metaId' => $row['metaId'],
             'sec' => wp_create_nonce('delete_post_metadata_by_mid_'.$row['metaId']),
         ]);
-        $nonceUrl = wp_nonce_url( home_url( $_SERVER['REQUEST_URI'] ).'&deletemeta='.$row['metaId'], 'delete_post_metadata_by_mid_'.$row['metaId'] );
 
 		return '<div class="row-actions">'
                     .'<span class="edit"><a href="'.$editUrl.'" aria-label="'.__( 'Edit link', 'woo-linked-products' ).'">'.__( 'Edit', 'woo-linked-products' ).'</a> | </span>'
@@ -261,20 +266,15 @@ class Linked_Products_List_Table extends WP_List_Table {
 	 * @return void
 	 */
 	protected function display_tablenav( $which ) {
-		?>
-	    <div class="tablenav <?php echo esc_attr( $which ); ?>">
-
-		<?php if ( $this->has_items() ) : ?>
-		<div class="alignleft actions bulkactions">
-			<?php $this->bulk_actions( $which ); ?>
-		</div>
-			<?php
-		endif;
-		$this->pagination( $which );
-		?>
-
-		<br class="clear" />
-	</div>
-		<?php
+        echo '<div class="tablenav '.esc_attr( $which ).'">';
+        if( $this->has_items() ) {
+            echo '<div class="alignleft actions bulkactions">';
+            $this->bulk_actions( $which );
+            echo '</div>';
+        }
+        $this->extra_tablenav( $which );
+        $this->pagination( $which );
+        echo '<br class="clear" /></div>';
+		
 	}
 }

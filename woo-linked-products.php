@@ -51,22 +51,31 @@ function woo_linked_products_init() {
     $page = $_REQUEST['page'];
 
     if($page === 'woo_linked_products') {
-        $nonce = $_REQUEST['sec'];
-        $action = $_REQUEST['action'];
-        $metaId = $_REQUEST['id'];
-        $metaData = $_REQUEST['metadata'];
+        $nonce = filter_input(INPUT_GET, 'sec', FILTER_DEFAULT);
+        $action = filter_input(INPUT_GET, 'action', FILTER_DEFAULT);
+        $metaId = filter_input(INPUT_GET, 'metaId', FILTER_DEFAULT); //$_REQUEST['id'];
+        $mainProductId = filter_input(INPUT_GET, 'mainProductId', FILTER_DEFAULT);
+        $linkedProductId = filter_input(INPUT_GET, 'linkedProductId', FILTER_DEFAULT);
+        $qty = filter_input(INPUT_GET, 'qty', FILTER_DEFAULT);
         
-        if($action === 'delete' && wp_verify_nonce($nonce, 'delete_post_metadata_by_mid_'.$metaId)) {
-            //delete_meta_by_mid('post', $metaId);
-            echo 'DELETE';
+        if($action === 'delete' && wp_verify_nonce($nonce, 'delete_post_metadata_by_mid_'.$metaId) 
+            && isset($metaId) && $metaId !== null) {
+
+            delete_metadata_by_mid('post', $metaId);
         }
-        else if($action === 'update' && wp_verify_nonce($nonce, 'update_post_metadata_by_mid_'.$metaId) && isset($metaData)) {	
-            //update_meta_by_mid('post', $metaId, $metaData);
-            echo 'UPDATE';
+        else if($action === 'update' && wp_verify_nonce($nonce, 'update_post_metadata_by_mid_'.$metaId) 
+            && isset($metaId) && isset($mainProductId) && isset($linkedProductId) && isset($qty) 
+            && $metaId !== null && $mainProductId !== null && $linkedProductId !== null && $qty !== null
+            && $mainProductId !== $linkedProductId && $qty > 0) {	
+
+            update_metadata_by_mid('post', $metaId, $qty, 'linked_product_'.$linkedProductId);
         }
-        else if ($action === 'create' && wp_verify_nonce($nonce, 'create_post_metadata') && isset($metaData)) {	
-            //create_meta('post', $metaId, $metaData);
-            echo 'CREATE';
+        else if ($action === 'create' && wp_verify_nonce($nonce, 'create_post_metadata') 
+            && isset($mainProductId) && isset($linkedProductId) && isset($qty)
+            && $mainProductId !== null && $linkedProductId !== null && $qty !== null
+            && $mainProductId !== $linkedProductId && $qty > 0) {
+
+            add_metadata('post', $mainProductId, 'linked_product_'.$linkedProductId, $qty, true);
         }
     }
 }
@@ -76,31 +85,31 @@ add_action ('admin_init', 'woo_linked_products_init');
  * Display the table of linked products
  */
 function woo_linked_products_main_page() { 
-    require_once plugin_dir_path( __FILE__ ) . 'classes/class-linked-products-list-table.php';
-    ?>
-
-    <div class="wrap">
-        <h1 class="wp-heading-inline"><?php _e('Linked Products', 'woo-linked-products'); ?></h1>
-        <a href="#" class="page-title-action"><?php _e('Add link', 'woo-linked-products'); ?></a>
-        <p><?php _e('This page allows you to manage the linked products.', 'woo-linked-products'); ?></p>
-    <?php  
+    require_once plugin_dir_path( __FILE__ ) . 'classes/class-linked-products-forms.php';
 
     if ( class_exists( 'Linked_Products_List_Table' ) ) {
-        $table = new Linked_Products_List_Table();
-        $table->prepare_items();
-        $table->has_items() ? $table->display() : $table->no_items();
-    }
-    else {
-        _e('Class Linked_Products_List_Table not found !', 'woo-linked-products');
-    }
+        $form = new Linked_Products_Forms();
+        $form->begin_page();
 
-    echo "</div>";
+        if(filter_input(INPUT_GET, 'action', FILTER_DEFAULT) === 'creating'){
+            $form->creation_form();
+        }
+        else if(filter_input(INPUT_GET, 'action', FILTER_DEFAULT) === 'edit') {
+            $metaId = filter_input(INPUT_GET, 'metaId', FILTER_DEFAULT);
+            $mainProductId = filter_input(INPUT_GET, 'mainProductId', FILTER_DEFAULT);
+            $linkedProductId = filter_input(INPUT_GET, 'linkedProductId', FILTER_DEFAULT);
+            $qty = filter_input(INPUT_GET, 'qty', FILTER_DEFAULT);
+    
+            $form->update_form($metaId, $mainProductId, $linkedProductId, $qty);
+        }
+
+        $form->list_table();
+        $form->end_page();
+    }
+     else {
+        _e('Class Linked_Products_Forms not found !', 'woo-linked-products');
+    }
 }
-
-/**
- * Display the form to add a new link
- */
-function woo_linked_products_edit_form() {}
 
 /**
  * Add linked products to cart when main product is added to cart
